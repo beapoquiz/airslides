@@ -940,7 +940,7 @@ input[type='number'] {
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 16%, transparent);
   color: var(--slide-text);
-  transform: translateY(-calc(0.8 * var(--u)));
+  transform: translateY(calc(-0.8 * var(--u)));
 }
 
 .targets {
@@ -953,7 +953,7 @@ input[type='number'] {
   position: absolute;
   width: calc(15 * var(--u));
   height: calc(15 * var(--u));
-  margin: -calc(7.5 * var(--u)) 0 0 -calc(7.5 * var(--u));
+  margin: calc(-7.5 * var(--u)) 0 0 calc(-7.5 * var(--u));
   border: calc(0.6 * var(--u)) dashed color-mix(in srgb, var(--slide-text) 40%, transparent);
   border-radius: 50%;
   transition:
