@@ -5,6 +5,7 @@ import { getRuntime } from '../runtime';
 import { settings } from '../settings';
 import { cameraStatusPanel } from './cameraStatus';
 import { fitCanvas, h } from './dom';
+import { recorderPanel } from './recorderPanel';
 import { drawSkeleton } from './skeleton';
 import { topbar } from './topbar';
 import type { View } from './view';
@@ -23,10 +24,12 @@ function fmt(n: number | null | undefined, digits = 2): string {
 }
 
 /** "Proof it works": live skeleton, every internal signal, threshold sliders. */
-export function createPlaygroundView(extraPanels: HTMLElement[] = []): View {
+export function createPlaygroundView(): View {
   const rt = getRuntime();
   const ctl = rt.controller;
   const disposers: (() => void)[] = [];
+  const recorder = recorderPanel(rt);
+  disposers.push(recorder.dispose);
 
   // ── video + overlay ────────────────────────────────────────────────────────
   const overlay = h('canvas', { class: 'pg-overlay', 'aria-hidden': 'true' });
@@ -246,7 +249,7 @@ export function createPlaygroundView(extraPanels: HTMLElement[] = []): View {
         h('p', { class: 'muted' }, 'Changes apply instantly and are saved in this browser.'),
         sliderList,
       ),
-      ...extraPanels,
+      recorder.el,
     ),
   );
 
