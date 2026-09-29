@@ -15,6 +15,9 @@ export type SwipeConfig = Pick<
   | 'swipeWarmupMs'
   | 'swipeOpenFraction'
   | 'swipeClosedFramesReset'
+  | 'swipeMaxSpeed'
+  | 'swipeMaxGapMs'
+  | 'swipeMinMovingFrames'
 >;
 
 interface Sample {
@@ -85,6 +88,13 @@ export class SwipeDetector {
       this.clear();
       return null;
     }
+    // A jump faster than any real hand is a tracking glitch (re-detection,
+    // a second hand, a looping video): start the history over from here.
+    const prevSample = this.buf[this.buf.length - 1];
+    if (prevSample && t > prevSample.t) {
+      const step = Math.hypot(center.x - prevSample.x, center.y - prevSample.y) / palm;
+      if ((step * 1000) / (t - prevSample.t) > this.cfg.swipeMaxSpeed) this.clear();
+    }
 
     this.buf.push({ t, x: center.x, y: center.y, palm, open });
     const cutoff = t - this.cfg.swipeWindowMs;
@@ -98,14 +108,22 @@ export class SwipeDetector {
     const dy = (last.y - first.y) / meanPalm;
     const sign = Math.sign(dx);
 
+    // Speed only from back-to-back samples: across a tracking gap the hand
+    // may have been re-detected somewhere else, which says nothing about how
+    // fast it moved. (Displacement may still span a gap — a real swipe can
+    // blur out for a few frames — but its speed shows up before the gap.)
+    // A real swipe also moves fast over several frames, whereas a tracking
+    // jump is a single step, hence the moving-pair count.
     let peak = 0;
+    let movingPairs = 0;
     for (let i = 1; i < this.buf.length; i++) {
       const a = this.buf[i - 1] as Sample;
       const b = this.buf[i] as Sample;
       const dt = b.t - a.t;
-      if (dt <= 0) continue;
-      const v = (((b.x - a.x) / meanPalm) * 1000) / dt;
-      peak = Math.max(peak, v * sign);
+      if (dt <= 0 || dt > this.cfg.swipeMaxGapMs) continue;
+      const v = ((((b.x - a.x) / meanPalm) * 1000) / dt) * sign;
+      peak = Math.max(peak, v);
+      if (v >= this.cfg.swipeMinSpeed) movingPairs++;
     }
     const openShare = this.buf.filter((s) => s.open).length / this.buf.length;
 
@@ -117,6 +135,7 @@ export class SwipeDetector {
       Math.abs(dx) >= this.cfg.swipeMinDx &&
       Math.abs(dx) >= this.cfg.swipeDxDyRatio * Math.abs(dy) &&
       peak >= this.cfg.swipeMinSpeed &&
+      movingPairs >= this.cfg.swipeMinMovingFrames &&
       openShare >= this.cfg.swipeOpenFraction;
     if (!isSwipe) return null;
 

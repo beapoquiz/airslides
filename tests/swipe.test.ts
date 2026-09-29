@@ -159,6 +159,47 @@ describe('swipe (through the controller)', () => {
     expect(count('next') + count('prev')).toBe(0);
   });
 
+  it('a tracking glitch (the hand teleports between frames) does not fire', () => {
+    const s = new Seq().hold(OPEN_HAND, RIGHT, 500).hold(OPEN_HAND, LEFT, 500);
+    const { count } = run(s.frames);
+    expect(count('next') + count('prev')).toBe(0);
+  });
+
+  it('a hand that drops out and is re-detected elsewhere does not fire', () => {
+    const s = new Seq().hold(OPEN_HAND, RIGHT, 500).empty(150).hold(OPEN_HAND, LEFT, 500);
+    const { count } = run(s.frames);
+    expect(count('next') + count('prev')).toBe(0);
+  });
+
+  it('a one-frame dropout followed by a re-detection jump does not fire', () => {
+    // captured from a real MediaPipe run: hand vanished for one frame and came
+    // back ~2.7 palm sizes away, i.e. one ~40 palm/s step between two rests
+    const s = new Seq()
+      .hold(OPEN_HAND, { x: 0.35, y: 0.5 }, 500)
+      .empty(33)
+      .hold(OPEN_HAND, { x: 0.65, y: 0.5 }, 500);
+    const { count } = run(s.frames);
+    expect(count('next') + count('prev')).toBe(0);
+  });
+
+  it('a real swipe that blurs out for a few frames mid-motion still fires', () => {
+    const blurOut = (i: number) => (i >= 4 && i <= 6 ? null : OPEN_HAND); // 3 frames lost
+    const s = new Seq()
+      .hold(OPEN_HAND, RIGHT, 400)
+      .move(blurOut, RIGHT, LEFT, 300)
+      .hold(OPEN_HAND, LEFT, 500);
+    expect(run(s.frames).count('next')).toBe(1);
+  });
+
+  it('a very fast but physically plausible flick still fires', () => {
+    // 0.45 of the frame width in 100 ms ≈ 40 palm sizes/s peak with easing
+    const s = new Seq()
+      .hold(OPEN_HAND, RIGHT, 400)
+      .move(OPEN_HAND, RIGHT, LEFT, 130)
+      .hold(OPEN_HAND, LEFT, 500);
+    expect(run(s.frames).count('next')).toBe(1);
+  });
+
   it('tolerates a couple of motion-blurred frames mid-swipe', () => {
     const blurry = (i: number) => (i === 3 || i === 4 ? RELAXED : OPEN_HAND);
     const s = new Seq()

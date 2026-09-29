@@ -70,6 +70,22 @@ export interface GestureConfig {
    * finishes after the hand opens. 1–2 blurred frames are still tolerated.
    */
   swipeClosedFramesReset: number;
+  /**
+   * A frame-to-frame jump faster than this (palm sizes/s, ≈ 5 m/s for a
+   * 10 cm palm) is treated as a tracking glitch and restarts the history.
+   */
+  swipeMaxSpeed: number;
+  /**
+   * Speed between two samples further apart than this (a tracking dropout)
+   * does not count toward the peak-speed requirement.
+   */
+  swipeMaxGapMs: number;
+  /**
+   * At least this many back-to-back frame pairs must move in the swipe
+   * direction at ≥ swipeMinSpeed. A tracking jump is a single step; a real
+   * swipe spans several frames.
+   */
+  swipeMinMovingFrames: number;
   /** Presenter's-view mapping: false → moving toward your left = next. */
   invertSwipe: boolean;
 
@@ -115,6 +131,9 @@ export const DEFAULT_CONFIG: Readonly<GestureConfig> = Object.freeze({
   swipeWarmupMs: 200,
   swipeOpenFraction: 0.7,
   swipeClosedFramesReset: 3,
+  swipeMaxSpeed: 50,
+  swipeMaxGapMs: 100,
+  swipeMinMovingFrames: 2,
   invertSwipe: false,
 
   holdDurationMs: 1000,
