@@ -1,0 +1,49 @@
+{
+  "name": "airslides",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Present slides with hand gestures — on-device hand tracking in the browser (MediaPipe + TypeScript).",
+  "license": "MIT",
+  "author": "Bea Juliana Poquiz",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "prepare-assets": "node scripts/copy-assets.mjs && node scripts/fetch-model.mjs",
+    "predev": "npm run prepare-assets",
+    "dev": "vite",
+    "predev:https": "npm run prepare-assets",
+    "dev:https": "vite --host --mode https",
+    "prebuild": "npm run prepare-assets",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "fetch-model": "node scripts/fetch-model.mjs"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^1.0.1",
+    "pdfjs-dist": "^6.3.289"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.3",
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
+    "eslint": "^10.11.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.12.0",
+    "pdf-lib": "^1.17.1",
+    "prettier": "^3.9.9",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.0",
+    "vite": "^8.3.1",
+    "vitest": "^5.0.2"
+  }
+}

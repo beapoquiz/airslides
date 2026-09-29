@@ -1,0 +1,23 @@
+# dependencies & build output
+node_modules/
+dist/
+coverage/
+
+# generated at predev/prebuild (see scripts/)
+public/models/*.task
+public/mediapipe/
+public/pdfjs/
+
+# test output
+test-results/
+playwright-report/
+blob-report/
+
+# env & editor
+.env
+.env.*
+*.log
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
