@@ -42,9 +42,9 @@ export function topbar(active: Route): HTMLElement {
     { class: 'topbar' },
     h(
       'a',
-      { class: 'brand', href: routeHref('present') },
+      { class: 'brand', href: routeHref('present'), 'aria-label': 'AirSlides home' },
       h('span', { class: 'brand-mark', 'aria-hidden': 'true' }, '✋'),
-      'AirSlides',
+      h('span', { class: 'brand-text' }, 'AirSlides'),
     ),
     h(
       'nav',

@@ -805,13 +805,15 @@ input[type='number'] {
 
 /* ── tutorial slides ──────────────────────────────────────────────────────── */
 .tslide {
+  /* one "slide unit": 1% of the height on landscape slides, width-based on portrait */
+  --u: 1cqh;
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 2.4cqh;
-  padding: 7cqh 8cqw;
+  gap: calc(2.4 * var(--u));
+  padding: calc(7 * var(--u)) 8cqw;
   background:
     radial-gradient(
       120% 90% at 100% 0%,
@@ -820,20 +822,20 @@ input[type='number'] {
     ),
     var(--slide-surface);
   color: var(--slide-text);
-  font-size: 3.3cqh;
+  font-size: calc(3.3 * var(--u));
   line-height: 1.4;
 }
 
 .tslide .step {
   color: var(--accent);
-  font: 700 2.4cqh/1 var(--mono);
+  font: 700 calc(2.4 * var(--u))/1 var(--mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .tslide h1 {
   margin: 0;
-  font-size: 8cqh;
+  font-size: calc(8 * var(--u));
   letter-spacing: -0.02em;
 }
 
@@ -854,8 +856,8 @@ input[type='number'] {
 }
 
 .tslide .gesture-art {
-  width: 22cqh;
-  height: 22cqh;
+  width: calc(22 * var(--u));
+  height: calc(22 * var(--u));
   flex: none;
   color: var(--accent);
 }
@@ -865,11 +867,11 @@ input[type='number'] {
   align-items: center;
   gap: 1.2cqw;
   width: fit-content;
-  padding: 1.2cqh 2cqw;
+  padding: calc(1.2 * var(--u)) 2cqw;
   border-radius: 999px;
   background: color-mix(in srgb, var(--slide-text) 7%, transparent);
   color: var(--slide-muted);
-  font-size: 2.8cqh;
+  font-size: calc(2.8 * var(--u));
 }
 
 .tslide .status-line.good {
@@ -879,17 +881,17 @@ input[type='number'] {
 
 .nice {
   position: absolute;
-  top: 7cqh;
+  top: calc(7 * var(--u));
   right: 7cqw;
   display: flex;
   align-items: center;
   gap: 1cqw;
-  padding: 1.4cqh 2.4cqw;
+  padding: calc(1.4 * var(--u)) 2.4cqw;
   border-radius: 999px;
   background: var(--ok);
   color: #04130a;
   font-weight: 800;
-  font-size: 3.2cqh;
+  font-size: calc(3.2 * var(--u));
   opacity: 0;
   transform: scale(0.6);
 }
@@ -923,11 +925,11 @@ input[type='number'] {
   place-items: center;
   width: 14cqw;
   height: 11cqw;
-  border: 0.4cqh solid color-mix(in srgb, var(--slide-text) 15%, transparent);
-  border-radius: 1.6cqh;
+  border: calc(0.4 * var(--u)) solid color-mix(in srgb, var(--slide-text) 15%, transparent);
+  border-radius: calc(1.6 * var(--u));
   color: var(--slide-muted);
   font-weight: 700;
-  font-size: 4cqh;
+  font-size: calc(4 * var(--u));
   transition:
     background 0.2s,
     border-color 0.2s,
@@ -938,7 +940,7 @@ input[type='number'] {
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 16%, transparent);
   color: var(--slide-text);
-  transform: translateY(-0.8cqh);
+  transform: translateY(-calc(0.8 * var(--u)));
 }
 
 .targets {
@@ -949,10 +951,10 @@ input[type='number'] {
 
 .target {
   position: absolute;
-  width: 15cqh;
-  height: 15cqh;
-  margin: -7.5cqh 0 0 -7.5cqh;
-  border: 0.6cqh dashed color-mix(in srgb, var(--slide-text) 40%, transparent);
+  width: calc(15 * var(--u));
+  height: calc(15 * var(--u));
+  margin: -calc(7.5 * var(--u)) 0 0 -calc(7.5 * var(--u));
+  border: calc(0.6 * var(--u)) dashed color-mix(in srgb, var(--slide-text) 40%, transparent);
   border-radius: 50%;
   transition:
     background 0.2s,
@@ -975,7 +977,7 @@ input[type='number'] {
 
 .tslide .checklist {
   display: grid;
-  gap: 1.2cqh;
+  gap: calc(1.2 * var(--u));
   margin: 0;
   padding: 0;
   list-style: none;
@@ -997,8 +999,8 @@ input[type='number'] {
 }
 
 .tslide .btn {
-  font-size: 2.8cqh;
-  min-height: 7cqh;
+  font-size: calc(2.8 * var(--u));
+  min-height: calc(7 * var(--u));
   width: fit-content;
 }
 
@@ -1283,12 +1285,16 @@ input[type='number'] {
   vertical-align: middle;
 }
 
-.gesture-table th,
-.key-table th {
+.gesture-table thead th,
+.key-table thead th {
   color: var(--muted);
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.gesture-table tbody th {
+  font-weight: 600;
 }
 
 .gesture-icon {
@@ -1440,5 +1446,133 @@ dialog.sheet::backdrop {
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* ── additions: tutorial text column, hints, icons ────────────────────────── */
+.tslide.narrow .tslide-text {
+  max-width: 44cqw;
+}
+
+.tslide.narrow .tslide-text p {
+  max-width: none;
+}
+
+.present:has(.blackout.on) .camera-bubble {
+  opacity: 0.4;
+}
+
+.present-root {
+  min-height: 100dvh;
+}
+
+.tslide-text {
+  display: flex;
+  flex-direction: column;
+  gap: calc(2.2 * var(--u));
+  min-width: 0;
+}
+
+.tslide .kbd-hint {
+  color: var(--faint);
+  font-size: calc(2.4 * var(--u));
+}
+
+.tslide .kbd-hint a {
+  color: var(--accent);
+}
+
+.tslide .gesture-art svg,
+.gesture-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.gesture-icon {
+  display: inline-block;
+}
+
+.tslide [hidden] {
+  display: none !important;
+}
+
+main:focus {
+  outline: none;
+}
+
+/* Portrait (phones held upright): the tutorial reflows into one column. */
+@container (orientation: portrait) {
+  .tslide {
+    --u: 1.45cqw;
+    justify-content: flex-start;
+    padding: 12cqw 7cqw 8cqw;
+  }
+
+  .tslide .row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .tslide .gesture-art {
+    width: 26cqw;
+    height: 26cqw;
+  }
+
+  .tslide p,
+  .tslide.narrow .tslide-text {
+    max-width: none;
+  }
+
+  .mini-card {
+    width: 24cqw;
+    height: 20cqw;
+  }
+
+  .nice {
+    top: auto;
+    bottom: 6cqw;
+    right: 6cqw;
+  }
+}
+
+.rotate-hint {
+  display: none;
+}
+
+@media (orientation: portrait) and (max-width: 600px) {
+  .present[data-deck='pdf'] .rotate-hint {
+    display: block;
+    position: absolute;
+    left: 50%;
+    top: max(70px, env(safe-area-inset-top));
+    transform: translateX(-50%);
+    z-index: 30;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bg-elev) 85%, transparent);
+    color: var(--muted);
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand-text {
+    display: none;
+  }
+
+  .topbar {
+    gap: 4px;
+  }
+
+  .gesture-table td:last-child,
+  .gesture-table thead th:last-child {
+    display: none;
+  }
+
+  .gesture-icon {
+    width: 44px;
+    height: 44px;
   }
 }
