@@ -81,20 +81,11 @@ Chromium was fed a Y4M "camera" clip of a real hand photo moving across the fram
   threshold. Entering a pinch therefore also requires
   `dist(wrist, indexTip) / dist(wrist, indexMCP) ≥ 1.1` (≈ 0.85 in a fist, ≈ 1.5 when pinching).
   It only gates _entering_, so an established pinch doesn't flicker.
-- **"Open hand" for swiping is judged over the window, not per frame.** ≥ 70 % of samples in the
-  350 ms window must be open, because fast motion blurs fingers for a frame or two. Three
-  consecutive not-open frames wipe the history, so motion made with a closed hand never counts
-  once the hand opens.
-- **Tracking-glitch rejection.** Three rules:
-  1. A frame-to-frame jump faster than 50 palm/s (≈ 5 m/s) restarts the history.
-  2. Speed measured across a dropout longer than 100 ms doesn't count toward the peak speed.
-  3. At least **2 consecutive frame pairs** must move at swipe speed.
-
-  Real data showed MediaPipe losing the hand for one frame and re-detecting it 4 palms away
-  97 ms later. That single step fell just under both thresholds 1 and 2 and fired a phantom
-  "previous". With rule 3, a 40 s capture (the clip loops, re-detecting the hand each time)
-  detected 5 of 5 swipes with no false triggers.
-
+- **Swipe detection is built around how MediaPipe behaves during a fast swipe** (measured, see
+  "Swipe responsiveness pass" below): landmarks freeze and then leap, the hand drops out for a
+  few frames, and blur distorts palm size and finger state. Palm size and "open hand" are
+  therefore measured while the hand is still and held during motion, and a single large
+  horizontal leap (or a dropout of up to 300 ms ending in one) counts as swipe evidence.
 - **Rejected swipe candidates consume their motion** (buffer cleared). Otherwise a return stroke
   suppressed at t = 900 ms would still sit in the buffer and fire at t = 1001 ms.
 - **Cooldown and return-stroke timers survive a hand loss.** A fast swipe often carries the
@@ -104,6 +95,8 @@ Chromium was fed a Y4M "camera" clip of a real hand photo moving across the fram
   must age out first). Instead a hold starts on the first matching frame and tolerates up to
   (1 − 0.8) × duration = 200 ms of cumulative absence. Stationarity is measured from where the
   hold began.
+- **Holds fire after a 300 ms confirmation window** (`holdConfirmMs`): the progress ring fills in
+  1 s, then the pose must stay still a little longer. See below for why.
 - **After a swipe, the palm hold is latched until the hand is lowered.** Presenters often keep an
   open hand raised after swiping; without this, one second of rest would black out the screen.
   Found while writing tests: sequences with an open hand resting > 1 s between swipes blacked out.
@@ -116,10 +109,79 @@ Chromium was fed a Y4M "camera" clip of a real hand photo moving across the fram
   shows the lock even with no hand in view. Lock and blackout live in the controller; the `L`/`B`
   keys call the same methods as the gestures, so both paths emit identical events.
 - **More tunables than the brief lists** (`swipeOpenFraction`, `swipeClosedFramesReset`,
-  `swipeMaxSpeed`, `swipeMaxGapMs`, `swipeMinMovingFrames`, `pinchMinIndexReach`): all in
-  `config.ts` with comments. The most useful ones are sliders in the Playground.
+  `swipeMaxSpeed`, `swipeMaxGapMs`, `swipeMaxDropoutMs`, `swipeMinMovingFrames`,
+  `swipeSettleSpeed`, `holdConfirmMs`, `pinchMinIndexReach`): all in `config.ts` with comments.
+  The most useful ones are sliders in the Playground.
 - **Settings store only values that differ from the defaults**, so improving a default in a
   later release reaches existing users.
+
+## Swipe responsiveness pass (October 2026)
+
+Swipes felt unreliable and slow in real use, so they were measured on **real MediaPipe output**
+instead of being tuned blind.
+
+**Benchmark.** A 74 s camera clip was rendered from real hand photos (four FreiHAND images,
+three hand sizes) with realistic velocity profiles and camera motion blur (70 % exposure). It
+contains 20 swipes from 140 to 420 ms, each followed by a natural swing-back (60–450 ms pause,
+220–600 ms long), plus negatives: a slow 2.6 s drift, a fast vertical move, and a hand sliding
+into the frame. Headless Chromium played it as a fake camera into the dev build. Every
+`HandFrame` was captured (two captures, 78 s and 40 s), aligned to the clip's ground truth, and
+replayed offline through any controller version. A frame-fingerprint check confirmed that the
+camera frames changed on almost every processed frame during motion, so the effects below are
+MediaPipe's, not the harness's. FreiHAND is research-only, so the clip and captures are not in
+the repo.
+
+**What MediaPipe does during a fast, blurred swipe:**
+
+1. **Landmarks freeze, then leap.** The tracker keeps reporting the old position for 100–250 ms
+   while the hand is already moving, then reports it at the far side in one frame (up to
+   ~100 palm sizes/s).
+2. **The hand drops out** for 1–6 frames (up to ~270 ms) mid-swipe.
+3. **Palm size is distorted** by up to ±60 %, and fingers can look curled.
+4. **Handedness flips** with high confidence (e.g. Right 0.97 → Left 0.91) during the motion.
+
+The original detector rejected exactly this pattern as a "tracking glitch". Missed swipes then
+let the slower, well-tracked swing-back fire the _opposite_ direction. Separately, a palm resting
+~1 s before a swipe plus the frozen frames completed the 1 s palm hold, blacking out the screen
+and swallowing every later swipe.
+
+**Changes:**
+
+- A single big horizontal leap, or a dropout of ≤ 300 ms ending in one, counts as two moving
+  frames. It is rejected only if mostly vertical or if the palm size changes drastically
+  (< 0.4× or > 2.5×). Handedness and tight size checks were tried and dropped: points 3 and 4
+  made them reject real swipes.
+- Palm size (the distance unit) and the open-hand state are taken from still frames and held
+  while the hand moves; only _still_, closed frames wipe the history.
+- A swipe-shaped motion that didn't fire still suppresses its own swing-back, and a swing-back
+  that starts inside the suppression window stays suppressed until the hand settles. When it
+  settles, its buffered motion is discarded.
+- Repeats are faster: cooldown 700 → 400 ms, plus a settle rule (the hand must drop below
+  1.5 palm/s before the same direction fires again) so one long sweep can't fire twice.
+- Swipe distance 1.5 → 1.2 palm sizes. On real 30 fps tracking this fires roughly 10 ms
+  earlier per swipe; 1.0 was slightly faster still in the benchmark, but 1.2 keeps more margin
+  against talking with your hands. The Playground slider goes lower.
+- Holds need a 300 ms confirmation window after the ring fills, so a swipe hidden by frozen
+  landmarks cancels the hold instead of turning into a blackout.
+
+**Result** (full system, default settings):
+
+|                                               | Before       | After             |
+| --------------------------------------------- | ------------ | ----------------- |
+| Swipes detected, capture 1 / 2                | 7/21 · 4/12  | **21/21 · 12/12** |
+| Slide moved the wrong way                     | 9            | **0**             |
+| Accidental blackouts                          | 3            | **0**             |
+| Median latency on swipes both versions caught | 236 · 305 ms | **225 · 190 ms**  |
+| Negatives triggered                           | 0            | 1 (see below)     |
+
+The one negative trigger is a stall in Chrome's fake camera that skipped 600 ms of video, so
+one hand appeared to teleport to a different spot. In real use this corresponds to tracking
+jumping to another hand of similar size, which is rare. Most of the remaining latency is
+MediaPipe's own tracking lag on blurred frames. Bright lighting shortens the camera's exposure,
+which reduces blur and lag, and the Help page now says so.
+
+**Differences from the original brief:** swipe cooldown 400 ms (brief: 700), swipe distance
+1.2 palm sizes (brief: 1.5), and holds fire at ~1.3 s (brief: ~1 s), all for the reasons above.
 
 ## Present view and UX
 

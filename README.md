@@ -38,6 +38,8 @@ audience can see it working. It runs on laptops, tablets and phones. No backend,
 | **Thumbs up** held still ~1 s     | Start / pause talk timer    |
 | **Fist** held still ~1 s          | Lock / unlock gestures      |
 
+Holds show a progress ring in the camera bubble and fire about 0.3 s after it fills.
+
 "Left" and "right" are from **your** point of view in the mirrored preview, like flicking a
 page on a phone: moving your hand toward your left means next. You can invert this in Settings.
 
@@ -83,18 +85,25 @@ or 1.5 m from the camera.
 
 **Swipe detection.** A 350 ms window of palm-centre positions must show mostly horizontal travel,
 far and fast enough, with an open hand (≥ 3 extended fingers). Hands entering the frame are
-ignored for 200 ms. Tracking glitches (a hand re-detected somewhere else) are rejected because a
-real swipe moves over several consecutive frames, not in a single jump.
+ignored for 200 ms. It is tuned on captured MediaPipe output, where a fast swipe often looks
+like frozen landmarks followed by a single leap, or a brief dropout, with the palm size distorted
+by motion blur. A single large horizontal leap therefore counts as a swipe, and palm size and
+"open hand" are measured while the hand is still. On a motion-blurred benchmark this raised
+detection from 11/33 to 33/33 swipes with zero wrong-way slides (details in
+[docs/DECISIONS.md](docs/DECISIONS.md#swipe-responsiveness-pass-october-2026)).
 
 **Return-stroke suppression.** After a swipe your hand naturally swings back. For 1 s the opposite
-direction is ignored, and a rejected motion is _consumed_ rather than left in the buffer, so the
-swing-back can't fire "previous" the moment the timer expires.
+direction is ignored; a swing-back that starts in that window stays ignored until your hand
+settles, and a rejected motion is _consumed_ rather than left in the buffer. Even a swipe that
+failed to fire blocks its own swing-back, so the slide never moves the wrong way.
 
-**Hold vs swipe (stationarity).** Palm / thumbs-up / fist actions need the pose held for ~1 s
-**and** the palm centre to stay within half a palm of where the hold started. An open hand that is
-moving is therefore a swipe candidate, never a blackout. After a swipe the palm-hold is latched
-until you lower your hand, so leaving your hand raised doesn't black out the screen. Short
-tracking dropouts (< 20 % of the hold) are tolerated. A hold fires once and must be released
+**Hold vs swipe (stationarity).** Palm / thumbs-up / fist actions need the pose held still: the
+ring fills in 1 s and the action fires after a further 0.3 s confirmation, while the palm centre
+stays within half a palm of where the hold started. An open hand that is moving is therefore a
+swipe candidate, never a blackout. The confirmation window matters because MediaPipe briefly
+freezes the landmarks when a swipe starts, so a resting hand would otherwise look still just long
+enough to black out the screen. After a swipe the palm-hold is latched until you lower your hand.
+Short tracking dropouts (< 20 % of the hold) are tolerated. A hold fires once and must be released
 before it can fire again.
 
 **Pinch → laser.** Thumb–index distance with hysteresis (enter < 0.35 palm, exit > 0.50, two

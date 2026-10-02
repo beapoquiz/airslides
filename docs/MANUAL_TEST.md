@@ -21,16 +21,17 @@ regression test. See `tests/fixtures/recorded/README.md`.
 Start the tutorial or open a PDF. For each row, do the gesture five times and count successes
 (the intended action fired exactly once) and false triggers (anything else fired).
 
-| Gesture                               | Near / bright | Near / dim | Far / bright | Far / dim | Left hand | Notes |
-| ------------------------------------- | ------------- | ---------- | ------------ | --------- | --------- | ----- |
-| Swipe left → next (×5)                | \_ / 5        | \_ / 5     | \_ / 5       | \_ / 5    | \_ / 5    |       |
-| Swipe right → previous (×5)           | \_ / 5        | \_ / 5     | \_ / 5       | \_ / 5    | \_ / 5    |       |
-| Swipe + natural swing back: no "prev" | \_ / 5        | \_ / 5     | \_ / 5       | \_ / 5    | \_ / 5    |       |
-| Pinch → laser appears / follows       | \_ / 5        | \_ / 5     | \_ / 5       | \_ / 5    | \_ / 5    |       |
-| Laser reaches all 4 slide corners     | \_ / 5        | \_ / 5     | \_ / 5       | \_ / 5    | \_ / 5    |       |
-| Open palm hold → blackout toggles     | \_ / 5        | \_ / 5     | \_ / 5       | \_ / 5    | \_ / 5    |       |
-| Thumbs up hold → timer toggles        | \_ / 5        | \_ / 5     | \_ / 5       | \_ / 5    | \_ / 5    |       |
-| Fist hold → lock toggles              | \_ / 5        | \_ / 5     | \_ / 5       | \_ / 5    | \_ / 5    |       |
+| Gesture                                              | Near / bright | Near / dim | Far / bright | Far / dim | Left hand | Notes |
+| ---------------------------------------------------- | ------------- | ---------- | ------------ | --------- | --------- | ----- |
+| Swipe left → next (×5)                               | \_ / 5        | \_ / 5     | \_ / 5       | \_ / 5    | \_ / 5    |       |
+| Swipe right → previous (×5)                          | \_ / 5        | \_ / 5     | \_ / 5       | \_ / 5    | \_ / 5    |       |
+| Swipe + natural swing back: no "prev"                | \_ / 5        | \_ / 5     | \_ / 5       | \_ / 5    | \_ / 5    |       |
+| Palm raised ~1 s, then swipe: navigates, no blackout | \_ / 5        | \_ / 5     | \_ / 5       | \_ / 5    | \_ / 5    |       |
+| Pinch → laser appears / follows                      | \_ / 5        | \_ / 5     | \_ / 5       | \_ / 5    | \_ / 5    |       |
+| Laser reaches all 4 slide corners                    | \_ / 5        | \_ / 5     | \_ / 5       | \_ / 5    | \_ / 5    |       |
+| Open palm hold → blackout toggles                    | \_ / 5        | \_ / 5     | \_ / 5       | \_ / 5    | \_ / 5    |       |
+| Thumbs up hold → timer toggles                       | \_ / 5        | \_ / 5     | \_ / 5       | \_ / 5    | \_ / 5    |       |
+| Fist hold → lock toggles                             | \_ / 5        | \_ / 5     | \_ / 5       | \_ / 5    | \_ / 5    |       |
 
 ## False-trigger checks (expect **zero** events)
 
