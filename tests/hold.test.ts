@@ -27,12 +27,13 @@ function drive(
 }
 
 describe('HoldDetector', () => {
-  it('fires once after the hold duration', () => {
+  it('fires once after the hold duration plus the confirmation window', () => {
     const d = new HoldDetector('open_palm', DEFAULT_CONFIG);
     const { fires } = drive(d, 0, 2500, () => true);
     expect(fires).toHaveLength(1);
-    expect(fires[0]!).toBeGreaterThanOrEqual(1000);
-    expect(fires[0]!).toBeLessThan(1000 + 3 * DT);
+    const due = DEFAULT_CONFIG.holdDurationMs + DEFAULT_CONFIG.holdConfirmMs;
+    expect(fires[0]!).toBeGreaterThanOrEqual(due);
+    expect(fires[0]!).toBeLessThan(due + 3 * DT);
   });
 
   it('reports progress between 0 and 1 while holding', () => {
@@ -80,15 +81,31 @@ describe('HoldDetector', () => {
 
     // proper release (≥ 300 ms) then hold: fires again
     r = drive(d, r.end, 400, () => false);
-    r = drive(d, r.end, 1200, () => true);
+    r = drive(d, r.end, 1600, () => true);
     expect(r.fires).toHaveLength(1);
+  });
+
+  it('a movement during the confirmation window cancels the hold (swipe hidden by frozen landmarks)', () => {
+    const d = new HoldDetector('open_palm', DEFAULT_CONFIG);
+    // still for 1.1 s (ring full), then the hand moves away fast
+    const still = drive(d, 0, 1100, () => true);
+    expect(still.fires).toHaveLength(0);
+    expect(d.progress).toBe(1);
+    const moved = drive(
+      d,
+      still.end,
+      300,
+      () => true,
+      (i) => ({ x: C.x - (i + 1) * 0.5 * PALM, y: C.y }),
+    );
+    expect(moved.fires).toHaveLength(0);
   });
 
   it('respects a custom duration', () => {
     const d = new HoldDetector('thumbs_up', { ...DEFAULT_CONFIG, holdDurationMs: 2000 });
     const early = drive(d, 0, 1500, () => true);
     expect(early.fires).toHaveLength(0);
-    const later = drive(d, early.end, 700, () => true);
+    const later = drive(d, early.end, 1000, () => true); // 2000 + 300 confirm
     expect(later.fires).toHaveLength(1);
   });
 });

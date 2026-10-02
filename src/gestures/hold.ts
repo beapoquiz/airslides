@@ -3,7 +3,7 @@ import { dist, type Vec2 } from './geometry';
 
 export type HoldConfig = Pick<
   GestureConfig,
-  'holdDurationMs' | 'holdPresenceRatio' | 'holdMaxMovement' | 'holdReleaseMs'
+  'holdDurationMs' | 'holdConfirmMs' | 'holdPresenceRatio' | 'holdMaxMovement' | 'holdReleaseMs'
 >;
 
 type Phase = 'idle' | 'holding' | 'fired';
@@ -18,8 +18,13 @@ type Phase = 'idle' | 'holding' | 'fired';
  *   (b) the palm centre stays within `holdMaxMovement` palm sizes of where
  *       the hold began. This stationarity rule is what separates "holding an
  *       open palm" from "swiping with an open hand".
- * It fires once at 100 %, then the pose must be released for
- * `holdReleaseMs` before it can fire again.
+ * Progress reaches 100 % after `holdDurationMs`; the hold then fires once the
+ * pose has stayed still for a further `holdConfirmMs`. That confirmation
+ * window exists because MediaPipe often *freezes* the landmarks for
+ * 100–250 ms when a fast swipe starts: without it, a hand resting before a
+ * swipe would look still long enough to fire, and the swipe would be lost.
+ * After firing, the pose must be released for `holdReleaseMs` before it can
+ * fire again.
  */
 export class HoldDetector<P extends string = string> {
   /** 0‥1, for the progress ring. */
@@ -75,8 +80,9 @@ export class HoldDetector<P extends string = string> {
           this.progress = 0;
           return false;
         }
-        this.progress = Math.min(1, (t - this.start) / this.cfg.holdDurationMs);
-        if (this.progress >= 1) {
+        const elapsed = t - this.start;
+        this.progress = Math.min(1, elapsed / this.cfg.holdDurationMs);
+        if (elapsed >= this.cfg.holdDurationMs + this.cfg.holdConfirmMs) {
           this.phase = 'fired';
           this.releasedMs = 0;
           this.progress = 0;

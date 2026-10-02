@@ -159,27 +159,91 @@ describe('swipe (through the controller)', () => {
     expect(count('next') + count('prev')).toBe(0);
   });
 
-  it('a tracking glitch (the hand teleports between frames) does not fire', () => {
-    const s = new Seq().hold(OPEN_HAND, RIGHT, 500).hold(OPEN_HAND, LEFT, 500);
-    const { count } = run(s.frames);
-    expect(count('next') + count('prev')).toBe(0);
-  });
+  // The next cases mirror what real MediaPipe output looks like during fast,
+  // motion-blurred swipes (captured from the engine, see docs/DECISIONS.md):
+  // landmarks freeze, the hand drops out, then it reappears at the far side.
 
-  it('a hand that drops out and is re-detected elsewhere does not fire', () => {
-    const s = new Seq().hold(OPEN_HAND, RIGHT, 500).empty(150).hold(OPEN_HAND, LEFT, 500);
-    const { count } = run(s.frames);
-    expect(count('next') + count('prev')).toBe(0);
-  });
-
-  it('a one-frame dropout followed by a re-detection jump does not fire', () => {
-    // captured from a real MediaPipe run: hand vanished for one frame and came
-    // back ~2.7 palm sizes away, i.e. one ~40 palm/s step between two rests
+  it('frozen landmarks followed by a one-step leap (tracker lag) count as a swipe', () => {
     const s = new Seq()
-      .hold(OPEN_HAND, { x: 0.35, y: 0.5 }, 500)
-      .empty(33)
-      .hold(OPEN_HAND, { x: 0.65, y: 0.5 }, 500);
+      .hold(OPEN_HAND, RIGHT, 600) // at rest
+      .hold(OPEN_HAND, RIGHT, 150) // hand already moving, landmarks frozen
+      .hold(OPEN_HAND, LEFT, 500); // reported at the far side in one step
+    const { count } = run(s.frames);
+    expect(count('next')).toBe(1);
+    expect(count('prev')).toBe(0);
+  });
+
+  it('a swipe hidden by a dropout of up to ~270 ms still fires', () => {
+    const s = new Seq().hold(OPEN_HAND, RIGHT, 500).empty(270).hold(OPEN_HAND, LEFT, 500);
+    expect(run(s.frames).count('next')).toBe(1);
+  });
+
+  it('a dropout longer than the hand-lost limit does not fire', () => {
+    const s = new Seq().hold(OPEN_HAND, RIGHT, 500).empty(400).hold(OPEN_HAND, LEFT, 500);
     const { count } = run(s.frames);
     expect(count('next') + count('prev')).toBe(0);
+  });
+
+  it('a mostly vertical leap does not fire', () => {
+    const s = new Seq()
+      .hold(OPEN_HAND, { x: 0.5, y: 0.2 }, 500)
+      .hold(OPEN_HAND, { x: 0.56, y: 0.8 }, 500);
+    const { count } = run(s.frames);
+    expect(count('next') + count('prev')).toBe(0);
+  });
+
+  it('a leap to a much bigger hand (someone close to the camera) does not fire', () => {
+    const s = new Seq()
+      .hold(OPEN_HAND, RIGHT, 500, { scale: 0.1 })
+      .hold(OPEN_HAND, LEFT, 500, { scale: 0.3 });
+    const { count } = run(s.frames);
+    expect(count('next') + count('prev')).toBe(0);
+  });
+
+  it('palm size distorted by blur mid-swipe does not break detection', () => {
+    const MID = { x: 0.52, y: 0.5 };
+    const s = new Seq()
+      .hold(OPEN_HAND, RIGHT, 400)
+      .move(OPEN_HAND, RIGHT, MID, 120)
+      .move(OPEN_HAND, MID, LEFT, 120, { scale: 0.09 }) // blur shrinks the hand
+      .hold(OPEN_HAND, LEFT, 400);
+    expect(run(s.frames).count('next')).toBe(1);
+  });
+
+  it('a slow swing-back that outlasts the suppression window does not fire', () => {
+    const s = new Seq()
+      .hold(OPEN_HAND, RIGHT, 400)
+      .move(OPEN_HAND, RIGHT, LEFT, 220)
+      .hold(OPEN_HAND, LEFT, 450)
+      .move(OPEN_HAND, LEFT, RIGHT, 900) // still moving 1.5 s after the swipe
+      .hold(OPEN_HAND, RIGHT, 600);
+    const { count } = run(s.frames);
+    expect(count('next')).toBe(1);
+    expect(count('prev')).toBe(0);
+  });
+
+  it('two deliberate swipes in the same direction ~0.6 s apart both fire', () => {
+    const s = new Seq()
+      .hold(OPEN_HAND, RIGHT, 400)
+      .move(OPEN_HAND, RIGHT, LEFT, 180)
+      .hold(OPEN_HAND, LEFT, 100)
+      .move(OPEN_HAND, LEFT, RIGHT, 180) // swing back (suppressed)
+      .hold(OPEN_HAND, RIGHT, 100)
+      .move(OPEN_HAND, RIGHT, LEFT, 180)
+      .hold(OPEN_HAND, LEFT, 400);
+    const { count } = run(s.frames);
+    expect(count('next')).toBe(2);
+    expect(count('prev')).toBe(0);
+  });
+
+  it('one long sweep across the frame fires only once', () => {
+    const s = new Seq()
+      .hold(OPEN_HAND, { x: 0.92, y: 0.5 }, 400)
+      .move(OPEN_HAND, { x: 0.92, y: 0.5 }, { x: 0.08, y: 0.5 }, 1000)
+      .hold(OPEN_HAND, { x: 0.08, y: 0.5 }, 400);
+    const { count } = run(s.frames);
+    expect(count('next')).toBe(1);
+    expect(count('prev')).toBe(0);
   });
 
   it('a real swipe that blurs out for a few frames mid-motion still fires', () => {

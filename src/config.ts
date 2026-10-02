@@ -56,42 +56,61 @@ export interface GestureConfig {
   swipeDxDyRatio: number;
   /** Peak horizontal speed must reach this (palm sizes per second). */
   swipeMinSpeed: number;
-  /** After any swipe, ignore all swipes for this long. */
+  /**
+   * After any swipe, ignore all swipes for this long. Repeated swipes in the
+   * same direction additionally need the hand to slow down in between (see
+   * swipeSettleSpeed), so one long sweep can't fire twice.
+   */
   swipeCooldownMs: number;
   /** After a swipe, ignore the opposite direction this long (return stroke). */
   swipeOppositeSuppressMs: number;
   /** Ignore swipes this long after a hand appears (entering the frame). */
   swipeWarmupMs: number;
-  /** Share of samples in the window that must be an open hand (tolerates motion blur). */
+  /**
+   * Share of samples in the window that must come from an open hand. "Open"
+   * is judged on frames where the hand is still and held while it moves,
+   * because motion blur makes fingers look curled.
+   */
   swipeOpenFraction: number;
   /**
-   * This many consecutive not-open frames wipe the swipe history, so motion
-   * made with a closed or relaxed hand never counts toward a swipe that
-   * finishes after the hand opens. 1–2 blurred frames are still tolerated.
+   * This many consecutive *still*, not-open frames wipe the swipe history, so
+   * motion made with a closed or relaxed hand never counts toward a swipe.
    */
   swipeClosedFramesReset: number;
   /**
-   * A frame-to-frame jump faster than this (palm sizes/s, ≈ 5 m/s for a
-   * 10 cm palm) is treated as a tracking glitch and restarts the history.
+   * A frame-to-frame jump faster than this (palm sizes/s) is treated as a
+   * tracking glitch and restarts the history. Deliberately generous: after
+   * lagging, MediaPipe can report a whole swipe as one ~100 palm/s step.
    */
   swipeMaxSpeed: number;
-  /**
-   * Speed between two samples further apart than this (a tracking dropout)
-   * does not count toward the peak-speed requirement.
-   */
+  /** Two samples further apart than this are separated by a tracking dropout. */
   swipeMaxGapMs: number;
   /**
-   * At least this many back-to-back frame pairs must move in the swipe
-   * direction at ≥ swipeMinSpeed. A tracking jump is a single step; a real
-   * swipe spans several frames.
+   * MediaPipe often freezes or loses the hand for 1–6 frames during a fast,
+   * blurred swipe, then reports it at the far side in one step. A dropout up
+   * to this long can be part of a swipe; a longer one restarts the history.
+   */
+  swipeMaxDropoutMs: number;
+  /**
+   * At least this many frame pairs must move in the swipe direction at
+   * ≥ swipeMinSpeed. A one-step leap of ≥ swipeMinDx (tracking lag) counts as
+   * two, unless the hand changed size or handedness across it.
    */
   swipeMinMovingFrames: number;
+  /** After a swipe, the hand must drop below this speed before the same direction can fire again. */
+  swipeSettleSpeed: number;
   /** Presenter's-view mapping: false → moving toward your left = next. */
   invertSwipe: boolean;
 
   // ── Hold → blackout / timer / lock (§5.5) ─────────────────────────────────
   /** How long a pose must be held still to fire. */
   holdDurationMs: number;
+  /**
+   * After the progress ring is full, the pose must stay still this much
+   * longer before the action fires. A swipe that MediaPipe briefly hid behind
+   * frozen landmarks shows up as movement in this window and cancels the hold.
+   */
+  holdConfirmMs: number;
   /** The pose must be present for at least this share of the hold. */
   holdPresenceRatio: number;
   /** Palm centre must stay within this many palm sizes of where the hold began. */
@@ -123,20 +142,23 @@ export const DEFAULT_CONFIG: Readonly<GestureConfig> = Object.freeze({
   activeRegion: 0.7,
 
   swipeWindowMs: 350,
-  swipeMinDx: 1.5,
+  swipeMinDx: 1.2,
   swipeDxDyRatio: 2,
   swipeMinSpeed: 3,
-  swipeCooldownMs: 700,
+  swipeCooldownMs: 400,
   swipeOppositeSuppressMs: 1000,
   swipeWarmupMs: 200,
   swipeOpenFraction: 0.7,
   swipeClosedFramesReset: 3,
-  swipeMaxSpeed: 50,
+  swipeMaxSpeed: 150,
   swipeMaxGapMs: 100,
+  swipeMaxDropoutMs: 300,
   swipeMinMovingFrames: 2,
+  swipeSettleSpeed: 1.5,
   invertSwipe: false,
 
   holdDurationMs: 1000,
+  holdConfirmMs: 300,
   holdPresenceRatio: 0.8,
   holdMaxMovement: 0.5,
   holdReleaseMs: 300,

@@ -9,7 +9,8 @@ const LEFT: Pt = { x: 0.3, y: 0.5 };
 
 const swipeLeft = (s: Seq) =>
   s.hold(OPEN_HAND, RIGHT, 300).move(OPEN_HAND, RIGHT, LEFT, 250).hold(OPEN_HAND, LEFT, 300);
-const hold = (s: Seq, tpl = OPEN_HAND, ms = 1300) => s.hold(tpl, CENTER, ms);
+// holds fire after holdDurationMs (1 s) + holdConfirmMs (0.3 s)
+const hold = (s: Seq, tpl = OPEN_HAND, ms = 1700) => s.hold(tpl, CENTER, ms);
 /** A neutral pose between gestures, long enough to release any hold latch. */
 const rest = (s: Seq, ms = 500) => s.hold(RELAXED, CENTER, ms);
 const pinchMove = (s: Seq) => s.move(PINCH, { x: 0.4, y: 0.4 }, { x: 0.6, y: 0.6 }, 600);
@@ -37,7 +38,7 @@ describe('GestureController — holds', () => {
 
   it('works from landmarks alone (no canned gesture) and with a confident canned label', () => {
     // relaxed-looking landmarks, but MediaPipe says Closed_Fist with high confidence
-    const s = new Seq().hold(RELAXED, CENTER, 1300, {
+    const s = new Seq().hold(RELAXED, CENTER, 1700, {
       canned: { name: 'Closed_Fist', score: 0.92 },
     });
     const { events } = run(s.frames);
@@ -133,10 +134,22 @@ describe('GestureController — blackout', () => {
       .move(OPEN_HAND, RIGHT, LEFT, 250)
       .hold(OPEN_HAND, LEFT, 300)
       .empty(500) // hand lowered out of view
-      .hold(OPEN_HAND, CENTER, 1300);
+      .hold(OPEN_HAND, CENTER, 1700);
     const { count } = run(s.frames);
     expect(count('next')).toBe(1);
     expect(count('toggleBlackout')).toBe(1);
+  });
+
+  it('resting an open hand ~1 s and then swiping navigates instead of blacking out', () => {
+    // MediaPipe freezes the landmarks as the swipe starts, so the resting hand
+    // looks still a little longer; the hold's confirmation window absorbs that.
+    const s = new Seq()
+      .hold(OPEN_HAND, RIGHT, 1000) // presenter pauses, palm raised
+      .hold(OPEN_HAND, RIGHT, 180) // swipe has started; landmarks frozen
+      .hold(OPEN_HAND, LEFT, 600); // tracker catches up in one step
+    const { count } = run(s.frames);
+    expect(count('next')).toBe(1);
+    expect(count('toggleBlackout')).toBe(0);
   });
 
   it('keeps holding the palm after blackout does not toggle it back', () => {
@@ -208,7 +221,7 @@ describe('GestureController — hand lost', () => {
   });
 
   it('a short dropout (< 200 ms) does not break a hold', () => {
-    const s = new Seq().hold(OPEN_HAND, CENTER, 600).empty(130).hold(OPEN_HAND, CENTER, 600);
+    const s = new Seq().hold(OPEN_HAND, CENTER, 800).empty(130).hold(OPEN_HAND, CENTER, 800);
     expect(run(s.frames).count('toggleBlackout')).toBe(1);
   });
 

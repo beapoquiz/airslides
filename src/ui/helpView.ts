@@ -57,7 +57,7 @@ const TROUBLESHOOTING: [string, string][] = [
   ],
   [
     'Swipes don’t trigger',
-    'Keep your hand open (fingers visible), flick a bit faster and further, and stay 0.5–1.5 m from the camera. The Playground shows your hand’s speed against the threshold.',
+    'Keep your hand open (fingers visible) and flick it clearly sideways, staying 0.5–1.5 m from the camera. Bright, even light helps most: the camera then uses a shorter exposure, so a fast swipe is less blurred and is tracked sooner. The Playground shows your hand’s speed against the threshold.',
   ],
   [
     'Slides change while I talk with my hands',
